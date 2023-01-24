@@ -1,10 +1,62 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Jan 24 14:01:13 2023
+Created on Thu Nov 17 11:52:02 2022
 
 @author: AmayaGS
 """
 
+import time
+import os, os.path
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+import itertools
+import sys
+import random
+
+import copy
+from collections import defaultdict
+from collections import Counter
+import pickle
+
+from PIL import Image
+from PIL import ImageFile
+
+import pandas as pd
+import numpy as np
+
+from matplotlib import pyplot as plt
+from matplotlib import ticker as tc
+import matplotlib.cm as cm
+
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.preprocessing import label_binarize
+from sklearn.metrics import roc_auc_score, roc_curve
+from sklearn.metrics import auc as calc_auc
+
+import torch
+from torch.utils.data import Dataset, Subset, IterableDataset
+from torch.utils.data import random_split
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from torch.optim import lr_scheduler
+from torch.autograd import Variable
+
+import torchvision
+from torchvision import datasets, models, transforms
+
+Image.MAX_IMAGE_PIXELS = None
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+
+plt.ion()  
+
+use_gpu = torch.cuda.is_available()
+if use_gpu:
+    print("Using CUDA")
+device = torch.device("cuda:0")
+
+import gc 
+gc.enable()
 class VGG_embedding(nn.Module):
     
     """
