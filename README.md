@@ -1,5 +1,5 @@
 # HistoMIL
-A modified CLAM/MIL model for large histopathology WSIs. The model breaks down to these components:
+A modified CLAM/MIL pipeline for large histopathology WSIs, composed of:
 
 <ol>
   <li>A VGG16 embedding backbone, previously trained on the WSI patches with labels propagated from the slide level, reducing each patch to a 1024 feature vector. </li>
