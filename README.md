@@ -9,7 +9,8 @@ A modified CLAM/MIL model for large histopathology WSIs. The model breaks down t
   <li>A heatmap is created for the slide</li>
 </ol>
 
-![alt text](https://github.com/[AmayaGS]/[HistoMIL]/blob/[branch]/image.jpg?raw=true)
+![alt text](https://github.com/AmayaGS/HistoMIL/blob/main/model.png?raw=true)
+
 
 <p>References:<br>
 https://github.com/mahmoodlab/CLAM#readme <br>
