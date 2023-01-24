@@ -3,7 +3,11 @@
 Created on Tue Jan 24 14:03:24 2023
 
 @author: AmayaGS
+
 """
+
+import numpy as np
+
 
 class Accuracy_Logger(object):
     

@@ -57,13 +57,15 @@ device = torch.device("cuda:0")
 
 import gc 
 gc.enable()
+
+
 class VGG_embedding(nn.Module):
     
     """
     Model definition
     """
 
-    def __init__(self):
+    def __init__(self, center="QMUL"):
         
         super(VGG_embedding, self).__init__()
         net = models.vgg16_bn(pretrained=True)
@@ -77,8 +79,9 @@ class VGG_embedding(nn.Module):
         features.extend([nn.Linear(num_features, 2)]) # Add our layer with n outputs
         net.classifier = nn.Sequential(*features)
         self.vgg_embedding = nn.Sequential(net)
+        self.center = center
         
-        net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/vgg16_BICETRE_Binary_12.pt"))
+        net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/vgg16_" + self.center + "_Binary_12.pt"))
         
         #num_features = net.classifier[6].in_features
         features = list(net.classifier.children())[:-1] # Remove last layer

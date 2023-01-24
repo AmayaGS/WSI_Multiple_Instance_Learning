@@ -101,7 +101,7 @@ df["Binary disease"] = df["Binary disease"].astype('Int64')
 
 # %%
 
-df = df[df["CENTER"] == "Bicetre"]
+df = df[df["CENTER"] == "Birmingham"]
 
 # %%
 
@@ -182,7 +182,7 @@ from auxiliary_functions import Accuracy_Logger
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-embedding_net = VGG_embedding()
+embedding_net = VGG_embedding(center="QMUL")
 gated_net = GatedAttention()
 
 # %%
@@ -234,7 +234,8 @@ def train_model(embedding_net, classification_net, train_loaded_subsets, test_lo
     
     since = time.time()
     #best_model_embedding_wts = copy.deepcopy(embedding_net.state_dict())
-    #best_model_classification_wts = copy.deepcopy(classification_net.state_dict())
+    best_model_classification_wts = copy.deepcopy(classification_net.state_dict())
+    best_auc = 0.
 
     for epoch in range(num_epochs):
         print("Epoch {}/{}".format(epoch, num_epochs))
@@ -243,8 +244,8 @@ def train_model(embedding_net, classification_net, train_loaded_subsets, test_lo
         ##################################
         # TRAIN
         
-        acc_logger = Accuracy_Logger(n_classes)
-        inst_logger = Accuracy_Logger(n_classes)
+        acc_logger = Accuracy_Logger(n_classes=n_classes)
+        inst_logger = Accuracy_Logger(n_classes=n_classes)
         
         train_loss = 0 # train_loss
         train_error = 0 
@@ -262,7 +263,7 @@ def train_model(embedding_net, classification_net, train_loaded_subsets, test_lo
         val_error = 0.
     
         val_inst_loss = 0.
-        val_inst_count=0
+        val_inst_count= 0
         
         val_acc = 0
 
@@ -414,7 +415,7 @@ def train_model(embedding_net, classification_net, train_loaded_subsets, test_lo
         val_accuracy = val_acc / len(test_loaded_subsets)
         
         if n_classes == 2:
-            auc = roc_auc_score(labels, prob[:, 1])
+            val_auc = roc_auc_score(labels, prob[:, 1])
             aucs = []
         else:
             aucs = []
@@ -426,10 +427,14 @@ def train_model(embedding_net, classification_net, train_loaded_subsets, test_lo
                 else:
                     aucs.append(float('nan'))
         
-            auc = np.nanmean(np.array(aucs))
+            val_auc = np.nanmean(np.array(aucs))
     
-    
-        print('\nVal Set, val_loss: {:.4f}, val_error: {:.4f}, AUC: {:.4f}, Accuracy: {:.4f}'.format(val_loss, val_error, auc, val_accuracy))
+        clsf_report = pd.DataFrame(classification_report(labels, np.argmax(prob, axis=1), output_dict=True, zero_division=1)).transpose()
+        conf_matrix = confusion_matrix(labels, np.argmax(prob, axis=1))
+        sensitivity = conf_matrix[0,0] / (conf_matrix[0,0] + conf_matrix[1,0]) # TP / (TP + FN)
+        specificity = conf_matrix[1,1] / (conf_matrix[1,1] + conf_matrix[0,1]) # TN / (TN + FP) 
+                    
+        print('\nVal Set, val_loss: {:.4f}, val_error: {:.4f}, AUC: {:.4f}, Accuracy: {:.4f}'.format(val_loss, val_error, val_auc, val_accuracy))
         if val_inst_count > 0:
             val_inst_loss /= val_inst_count
             for i in range(2):
@@ -440,8 +445,11 @@ def train_model(embedding_net, classification_net, train_loaded_subsets, test_lo
         for i in range(n_classes):
             acc, correct, count = val_acc_logger.get_summary(i)
             print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
-        
-        
+            
+        print(clsf_report)
+        print(conf_matrix)
+        print('Sensitivity: ', sensitivity) 
+        print('Specificity: ', specificity) 
         #avg_loss_val = loss_val / len(test_loaded_subsets)
         #avg_acc_val = acc_val / len(test_loaded_subsets)
         
@@ -459,10 +467,9 @@ def train_model(embedding_net, classification_net, train_loaded_subsets, test_lo
         # print('-' * 10)
         # print()
 
-        # if avg_acc_val > best_acc:
-        #     best_model_embedding_wts = copy.deepcopy(embedding_net.state_dict())
-        #     best_model_classification_wts = copy.deepcopy(classification_net.state_dict())
-        #     best_acc = avg_acc_val
+        if val_auc > best_auc:
+            best_model_classification_wts = copy.deepcopy(classification_net.state_dict())
+            best_auc = val_auc
             
     elapsed_time = time.time() - since
     
@@ -471,7 +478,7 @@ def train_model(embedding_net, classification_net, train_loaded_subsets, test_lo
     #print("Best acc: {:.4f}".format(best_acc))
     
     #embedding_net.load_state_dict(best_model_embedding_wts)
-    #classification_net.load_state_dict(best_model_classification_wts)
+    classification_net.load_state_dict(best_model_classification_wts)
         
     return embedding_net, classification_net
 
@@ -488,14 +495,16 @@ optimizer_ft = optim.Adam(gated_net.parameters(), lr=0.0001)
 
 # %%
 
-embedding_weights, classification_weights = train_model(embedding_net, gated_net, train_loaded_subsets, test_loaded_subsets, loss_fn, optimizer_ft, n_classes=2, bag_weight=0.3, num_epochs=6)
+embedding_weights, classification_weights = train_model(embedding_net, gated_net, train_loaded_subsets, test_loaded_subsets, loss_fn, optimizer_ft, n_classes=2, bag_weight=0.7, num_epochs=10)
 
 #embedding_net, classification_net, train_loaded_subsets, test_loaded_subsets, n_classes, bag_weight, loss_fn, optimizer, num_epochs=1
 
 # %%
 
+center = "BIRM"
+
 #torch.save(embedding_weights.state_dict(), r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/embedding_QMUL_Binary_12.pt")
-torch.save(classification_weights.state_dict(), r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/classification_Bicetre_Binary_12.pt")
+torch.save(classification_weights.state_dict(), r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/classification_" + center + "_Binary_12.pt")
 
 # %%
 
@@ -591,6 +600,10 @@ def test_model(embedding_net, classification_net, test_loaded_subsets, loss_fn, 
     
         auc = np.nanmean(np.array(aucs))
 
+    clsf_report = pd.DataFrame(classification_report(labels, np.argmax(prob, axis=1), output_dict=True, zero_division=1)).transpose()
+    conf_matrix = confusion_matrix(labels, np.argmax(prob, axis=1))
+    sensitivity = conf_matrix[0,0] / (conf_matrix[0,0] + conf_matrix[1,0]) # TP / (TP + FN)
+    specificity = conf_matrix[1,1] / (conf_matrix[1,1] + conf_matrix[0,1]) # TN / (TN + FP) 
 
     print('\nVal Set, val_loss: {:.4f}, val_error: {:.4f}, AUC: {:.4f}, Accuracy: {:.4f}'.format(val_loss, val_error, auc, val_accuracy))
     if val_inst_count > 0:
@@ -603,19 +616,38 @@ def test_model(embedding_net, classification_net, test_loaded_subsets, loss_fn, 
     for i in range(n_classes):
         acc, correct, count = val_acc_logger.get_summary(i)
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
-        
-    clsf_report = pd.DataFrame(classification_report(labels, prob[:, 1], output_dict=True)).transpose()
-    #clsf_report.to_csv('classification_report_patient_level_' + test_split + '_' +  celltype + '.csv', index=True)
-    print(clsf_report)
 
-        
+    print(clsf_report)
+    print(conf_matrix)
+    print('Sensitivity: ', sensitivity) 
+    print('Specificity: ', specificity)
+
     elapsed_time = time.time() - since
     
     print()
     print("Training completed in {:.0f}m {:.0f}s".format(elapsed_time // 60, elapsed_time % 60))
         
-    return val_error, auc, val_accuracy, val_acc_logger, clsf_report
+    return val_error, auc, val_accuracy, val_acc_logger, clsf_report, conf_matrix, sensitivity, specificity
+
+
+# %%
+    
+from attention_models import VGG_embedding, GatedAttention
+
+center = "BIRM"
+
+gated_net = GatedAttention()
+
+# load pre trained models
+embedding_net = VGG_embedding(center="BIRM")
+gated_net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/classification_" + center + "_Binary_12.pt"))
+
+if use_gpu:
+    embedding_net.cuda()
+    gated_net.cuda()
 
 # %%
 
-test_error, test_auc, test_accuracy, test_acc_logger, clsf_report =  test_model(embedding_net, gated_net, test_loaded_subsets, loss_fn, n_classes=2)
+test_error, test_auc, test_accuracy, test_acc_logger, clsf_report, conf_matrix, sensitivity, specificity =  test_model(embedding_net, gated_net, test_loaded_subsets, loss_fn, n_classes=2)
+
+ # %%
