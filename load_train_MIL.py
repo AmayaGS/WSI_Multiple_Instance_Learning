@@ -29,6 +29,8 @@ import matplotlib.cm as cm
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import roc_curve
+from sklearn.metrics import RocCurveDisplay
 from sklearn.preprocessing import label_binarize
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.metrics import auc as calc_auc
@@ -101,7 +103,7 @@ df["Binary disease"] = df["Binary disease"].astype('Int64')
 
 # %%
 
-df = df[df["CENTER"] == "Birmingham"]
+df = df[df["CENTER"] == "QMUL"]
 
 # %%
 
@@ -467,9 +469,9 @@ def train_model(embedding_net, classification_net, train_loaded_subsets, test_lo
         # print('-' * 10)
         # print()
 
-        if val_auc > best_auc:
+        if val_accuracy > best_auc:
             best_model_classification_wts = copy.deepcopy(classification_net.state_dict())
-            best_auc = val_auc
+            best_auc = val_accuracy
             
     elapsed_time = time.time() - since
     
@@ -495,7 +497,7 @@ optimizer_ft = optim.Adam(gated_net.parameters(), lr=0.0001)
 
 # %%
 
-embedding_weights, classification_weights = train_model(embedding_net, gated_net, train_loaded_subsets, test_loaded_subsets, loss_fn, optimizer_ft, n_classes=2, bag_weight=0.7, num_epochs=10)
+embedding_weights, classification_weights = train_model(embedding_net, gated_net, train_loaded_subsets, test_loaded_subsets, loss_fn, optimizer_ft, n_classes=2, bag_weight=0.7, num_epochs=20)
 
 #embedding_net, classification_net, train_loaded_subsets, test_loaded_subsets, n_classes, bag_weight, loss_fn, optimizer, num_epochs=1
 
@@ -616,6 +618,11 @@ def test_model(embedding_net, classification_net, test_loaded_subsets, loss_fn, 
     for i in range(n_classes):
         acc, correct, count = val_acc_logger.get_summary(i)
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
+        
+    fpr, tpr, _ = roc_curve(labels, prob[:, 1])
+    roc_display = RocCurveDisplay(fpr=fpr, tpr=tpr).plot()
+    roc_display.figure_.set_size_inches(5,5)
+    plt.plot([0, 1], [0, 1], color = 'g')
 
     print(clsf_report)
     print(conf_matrix)
@@ -633,13 +640,14 @@ def test_model(embedding_net, classification_net, test_loaded_subsets, loss_fn, 
 # %%
     
 from attention_models import VGG_embedding, GatedAttention
+from auxiliary_functions import Accuracy_Logger
 
-center = "BIRM"
+center = "QMUL"
 
 gated_net = GatedAttention()
 
 # load pre trained models
-embedding_net = VGG_embedding(center="BIRM")
+embedding_net = VGG_embedding(center="QMUL")
 gated_net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/classification_" + center + "_Binary_12.pt"))
 
 if use_gpu:
