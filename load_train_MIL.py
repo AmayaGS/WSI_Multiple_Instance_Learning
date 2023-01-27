@@ -457,9 +457,9 @@ def train_model(embedding_net, classification_net, train_loaded_subsets, test_lo
         # print('-' * 10)
         # print()
 
-        if val_accuracy > best_auc:
+        if val_auc > best_auc:
             best_model_classification_wts = copy.deepcopy(classification_net.state_dict())
-            best_auc = val_accuracy
+            best_auc = val_auc
             
     elapsed_time = time.time() - since
     
@@ -496,7 +496,7 @@ loss_fn = nn.CrossEntropyLoss()
 
 #optimizer_ft = optim.SGD(all_params, lr=0.0001, momentum=0.9, weight_decay=0)
 #optimizer_ft = optim.Adam(classification_net.parameters(), lr=0.0001)
-optimizer_ft = optim.Adam(classification_net.parameters(), lr=0.0001)
+optimizer_ft = optim.Adam(classification_net.parameters(), lr=0.00001)
 #exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.01)
 
 # %%
@@ -643,14 +643,12 @@ def test_model(embedding_net, classification_net, test_loaded_subsets, loss_fn, 
 # %%
     
 from attention_models import VGG_embedding, GatedAttention
-from auxiliary_functions import Accuracy_Logger
-
-center = "QMUL"
+#from auxiliary_functions import Accuracy_Logger
 
 classification_net = GatedAttention()
+embedding_net = VGG_embedding()
 
 # load pre trained models
-embedding_net = VGG_embedding(center="QMUL")
 embedding_net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/embedding_QMUL_Binary_12.pth"), strict=True)
 classification_net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/classification_QMUL_Binary_12.pth"), strict=True)
 
