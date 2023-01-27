@@ -179,22 +179,6 @@ subset_test_loader = torch.utils.data.DataLoader(subset_test_df, batch_size=1, s
 
 # %%
 
-from attention_models import VGG_embedding, GatedAttention
-from auxiliary_functions import Accuracy_Logger
-
-device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-embedding_net = VGG_embedding(center="QMUL")
-gated_net = GatedAttention()
-
-# %%
-
-if use_gpu:
-    embedding_net.cuda()
-    gated_net.cuda()
-
-# %%
-
 ##########################################
 
 # TRAIN dict
@@ -236,7 +220,7 @@ def train_model(embedding_net, classification_net, train_loaded_subsets, test_lo
     
     since = time.time()
     #best_model_embedding_wts = copy.deepcopy(embedding_net.state_dict())
-    best_model_classification_wts = copy.deepcopy(classification_net.state_dict())
+    #best_model_classification_wts = copy.deepcopy(classification_net.state_dict())
     best_auc = 0.
 
     for epoch in range(num_epochs):
@@ -272,7 +256,7 @@ def train_model(embedding_net, classification_net, train_loaded_subsets, test_lo
         ###################################
         # TRAIN
         
-        embedding_net.train(False)
+        embedding_net.eval()
         classification_net.train(True)
         
         for batch_idx, loader in enumerate(train_loaded_subsets.values()):
@@ -349,9 +333,8 @@ def train_model(embedding_net, classification_net, train_loaded_subsets, test_lo
             acc, correct, count = acc_logger.get_summary(i)
             print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
                   
-        embedding_net.train(False)
+        #embedding_net.train(False)
         classification_net.train(False)
-        
         
         ################################
         # TEST
@@ -435,6 +418,11 @@ def train_model(embedding_net, classification_net, train_loaded_subsets, test_lo
         conf_matrix = confusion_matrix(labels, np.argmax(prob, axis=1))
         sensitivity = conf_matrix[0,0] / (conf_matrix[0,0] + conf_matrix[1,0]) # TP / (TP + FN)
         specificity = conf_matrix[1,1] / (conf_matrix[1,1] + conf_matrix[0,1]) # TN / (TN + FP) 
+        
+        # fpr, tpr, _ = roc_curve(labels, prob[:, 1])
+        # roc_display = RocCurveDisplay(fpr=fpr, tpr=tpr).plot(color= "r")
+        # roc_display.figure_.set_size_inches(10,10)
+        # plt.plot([0, 1], [0, 1], color = 'b--')
                     
         print('\nVal Set, val_loss: {:.4f}, val_error: {:.4f}, AUC: {:.4f}, Accuracy: {:.4f}'.format(val_loss, val_error, val_auc, val_accuracy))
         if val_inst_count > 0:
@@ -486,27 +474,41 @@ def train_model(embedding_net, classification_net, train_loaded_subsets, test_lo
 
 # %%
 
+from attention_models import VGG_embedding, GatedAttention
+from auxiliary_functions import Accuracy_Logger
+
+device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+embedding_net = VGG_embedding()
+classification_net = GatedAttention()
+
+# %%
+
+if use_gpu:
+    embedding_net.cuda()
+    classification_net.cuda()
+
+# %%
+
 loss_fn = nn.CrossEntropyLoss()
 
 #all_params = itertools.chain(embedding_net.parameters(), classification_net.parameters())
 
 #optimizer_ft = optim.SGD(all_params, lr=0.0001, momentum=0.9, weight_decay=0)
 #optimizer_ft = optim.Adam(classification_net.parameters(), lr=0.0001)
-optimizer_ft = optim.Adam(gated_net.parameters(), lr=0.0001)
+optimizer_ft = optim.Adam(classification_net.parameters(), lr=0.0001)
 #exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.01)
 
 # %%
 
-embedding_weights, classification_weights = train_model(embedding_net, gated_net, train_loaded_subsets, test_loaded_subsets, loss_fn, optimizer_ft, n_classes=2, bag_weight=0.7, num_epochs=20)
+embedding_weights, classification_weights = train_model(embedding_net, classification_net, train_loaded_subsets, test_loaded_subsets, loss_fn, optimizer_ft, n_classes=2, bag_weight=0.7, num_epochs=1)
 
 #embedding_net, classification_net, train_loaded_subsets, test_loaded_subsets, n_classes, bag_weight, loss_fn, optimizer, num_epochs=1
 
 # %%
 
-center = "BIRM"
-
-#torch.save(embedding_weights.state_dict(), r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/embedding_QMUL_Binary_12.pt")
-torch.save(classification_weights.state_dict(), r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/classification_" + center + "_Binary_12.pt")
+torch.save(embedding_weights.state_dict(), r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/embedding_QMUL_Binary_12.pth")
+torch.save(classification_weights.state_dict(), r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/classification_QMUL_Binary_12.pth")
 
 # %%
 
@@ -517,8 +519,9 @@ def test_model(embedding_net, classification_net, test_loaded_subsets, loss_fn, 
     ###################################
     # TEST
     
-    val_acc_logger = Accuracy_Logger(n_classes)
-    val_inst_logger = Accuracy_Logger(n_classes)
+    val_acc_logger = Accuracy_Logger(n_classes=n_classes)
+    val_inst_logger = Accuracy_Logger(n_classes=n_classes)
+    
     val_loss = 0.
     val_error = 0.
 
@@ -588,7 +591,7 @@ def test_model(embedding_net, classification_net, test_loaded_subsets, loss_fn, 
     val_accuracy = val_acc / len(test_loaded_subsets)
     
     if n_classes == 2:
-        auc = roc_auc_score(labels, prob[:, 1])
+        val_auc = roc_auc_score(labels, prob[:, 1])
         aucs = []
     else:
         aucs = []
@@ -600,14 +603,14 @@ def test_model(embedding_net, classification_net, test_loaded_subsets, loss_fn, 
             else:
                 aucs.append(float('nan'))
     
-        auc = np.nanmean(np.array(aucs))
+        val_auc = np.nanmean(np.array(aucs))
 
     clsf_report = pd.DataFrame(classification_report(labels, np.argmax(prob, axis=1), output_dict=True, zero_division=1)).transpose()
     conf_matrix = confusion_matrix(labels, np.argmax(prob, axis=1))
     sensitivity = conf_matrix[0,0] / (conf_matrix[0,0] + conf_matrix[1,0]) # TP / (TP + FN)
     specificity = conf_matrix[1,1] / (conf_matrix[1,1] + conf_matrix[0,1]) # TN / (TN + FP) 
 
-    print('\nVal Set, val_loss: {:.4f}, val_error: {:.4f}, AUC: {:.4f}, Accuracy: {:.4f}'.format(val_loss, val_error, auc, val_accuracy))
+    print('\nVal Set, val_loss: {:.4f}, val_error: {:.4f}, AUC: {:.4f}, Accuracy: {:.4f}'.format(val_loss, val_error, val_auc, val_accuracy))
     if val_inst_count > 0:
         val_inst_loss /= val_inst_count
         for i in range(2):
@@ -619,10 +622,10 @@ def test_model(embedding_net, classification_net, test_loaded_subsets, loss_fn, 
         acc, correct, count = val_acc_logger.get_summary(i)
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
         
-    fpr, tpr, _ = roc_curve(labels, prob[:, 1])
-    roc_display = RocCurveDisplay(fpr=fpr, tpr=tpr).plot()
-    roc_display.figure_.set_size_inches(5,5)
-    plt.plot([0, 1], [0, 1], color = 'g')
+    # fpr, tpr, _ = roc_curve(labels, prob[:, 1])
+    # roc_display = RocCurveDisplay(fpr=fpr, tpr=tpr).plot(color= "r")
+    # roc_display.figure_.set_size_inches(10,10)
+    # plt.plot([0, 1], [0, 1], color = 'b')
 
     print(clsf_report)
     print(conf_matrix)
@@ -634,7 +637,7 @@ def test_model(embedding_net, classification_net, test_loaded_subsets, loss_fn, 
     print()
     print("Training completed in {:.0f}m {:.0f}s".format(elapsed_time // 60, elapsed_time % 60))
         
-    return val_error, auc, val_accuracy, val_acc_logger, clsf_report, conf_matrix, sensitivity, specificity
+    return val_error, val_auc, val_accuracy, val_acc_logger, labels, prob, clsf_report, conf_matrix, sensitivity, specificity
 
 
 # %%
@@ -644,18 +647,56 @@ from auxiliary_functions import Accuracy_Logger
 
 center = "QMUL"
 
-gated_net = GatedAttention()
+classification_net = GatedAttention()
 
 # load pre trained models
 embedding_net = VGG_embedding(center="QMUL")
-gated_net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/classification_" + center + "_Binary_12.pt"))
+embedding_net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/embedding_QMUL_Binary_12.pth"), strict=True)
+classification_net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/classification_QMUL_Binary_12.pth"), strict=True)
 
 if use_gpu:
     embedding_net.cuda()
-    gated_net.cuda()
+    classification_net.cuda()
 
 # %%
 
-test_error, test_auc, test_accuracy, test_acc_logger, clsf_report, conf_matrix, sensitivity, specificity =  test_model(embedding_net, gated_net, test_loaded_subsets, loss_fn, n_classes=2)
+test_error, test_auc, test_accuracy, test_acc_logger, labels, prob, clsf_report, conf_matrix, sensitivity, specificity =  test_model(embedding_net, classification_net, test_loaded_subsets, loss_fn, n_classes=2)
 
- # %%
+# %%
+
+# AUC
+
+fpr, tpr, _ = roc_curve(labels, prob[:, 1])
+plt.figure(figsize=(5,5))
+plt.plot(fpr, tpr, color='r', label='model (AUC = %0.2f)' % test_auc)
+plt.plot([0, 1], [0, 1], color = 'black', linestyle = '--')
+plt.xticks(fontsize=12)
+plt.yticks(fontsize=12)
+plt.xlabel('False Positive Rate', size=15)
+plt.ylabel('True Positive Rate', size=15)
+plt.title('Receiver Operating Characteristic', size=15)
+plt.legend(loc="lower right", prop={'size': 12})
+plt.show()
+
+# %%
+
+# PR
+
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import auc, average_precision_score
+
+precision, recall, thresholds = precision_recall_curve(labels, prob[:, 1])
+auc_precision_recall = auc(recall, precision)
+plt.figure(figsize=(5,5))
+plt.plot(recall, precision, color='darkblue', label='model (AP = %0.2f)' % auc_precision_recall, )
+#add axis labels to plot
+plt.xticks(fontsize=12)
+plt.yticks(fontsize=12)
+plt.title('Precision-Recall Curve', size=15)
+plt.ylabel('Precision', size=15)
+plt.xlabel('Recall', size=15)
+plt.legend(loc='lower left', prop={'size': 12})
+#display plot
+plt.show()
+
+# %%
