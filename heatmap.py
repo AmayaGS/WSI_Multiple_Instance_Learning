@@ -27,8 +27,8 @@ Image.MAX_IMAGE_PIXELS = None
 patch_size = 224
 step = 12
 slide_level = 1
-main_path = r"C:\Users\Amaya\Documents\PhD\NECCESITY\Slides\QMUL\slides\PATHSSAI ID 10-101-02.ndpi"
-binary_mask = r"C:\Users\Amaya\Documents\PhD\NECCESITY\Slides\QMUL\masks\PATHSSAI ID 10-101-02.png"
+main_path = r"C:\Users\Amaya\Documents\PhD\NECCESITY\Slides\QMUL\slides\PATHSSAI ID 10-T59-02.ndpi"
+binary_mask = r"C:\Users\Amaya\Documents\PhD\NECCESITY\Slides\QMUL\masks\PATHSSAI ID 10-T59-02.png"
 
 # %%
 
@@ -45,7 +45,7 @@ np_img = np.array(slide.read_region((0, 0), slide_level, slide_adjusted_level_di
 height = np_img.shape[0]
 width = np_img.shape[1]
 
-square = (np_img.shape[0] // 224) * 224
+square = (np_img.shape[1] // 224) * 224
 
 dif_h = (height - square) / 2 
 dif_w = (width - square) / 2 
@@ -61,12 +61,11 @@ cropped_image = np_img[h_min:h_max, w_min:w_max]
 # %%
 
 np_mask = cv2.imread(binary_mask, 0)
-np_mask_resized = cv2.resize(np_mask, cropped_image.shape[:2])
+np_mask_resized = cv2.resize(np_mask, (np_img.shape[1], np_img.shape[0]))
 
 # %%
 
-#img_crop = cv2.bitwise_and(cropped_image, cropped_image, mask=np_mask_resized)
-#img_crop[img_crop == 0] = 255
+cropped_mask = np_mask_resized[h_min:h_max, w_min:w_max]
 
 # %%
 
@@ -152,7 +151,7 @@ for i in range(size):
 
 # %%
 
-att_img_crop = cv2.bitwise_and(att_img, att_img, mask=np_mask_resized)
+att_img_crop = cv2.bitwise_and(att_img, att_img, mask=cropped_mask)
 att_img_crop[ att_img_crop==0 ] = np.nan
         
 # %%
@@ -177,18 +176,18 @@ plt.show()
 plt.figure(figsize=(50, 50))
 plt.subplot(221)
 plt.title('Original image', size=50)
-plt.imshow(np_img)
+plt.imshow(cropped_image)
 plt.subplot(222)
 plt.title('Predicted heatmap', size=50)
 plt.imshow(att_img_crop, cmap=plt.cm.RdBu)
+plt.imshow(cropped_image, alpha=0.4)
 plt.show()
 
 # %%
 
 plt.figure(figsize=(50, 50))
-plt.title('Heatmap overlay', size=80)
-plt.imshow(cropped_image)
-plt.imshow(att_img_crop, alpha=0.4,  cmap=plt.cm.RdBu)
+plt.title('Predicted heatmap', size=80)
+plt.imshow(att_img_crop, cmap=plt.cm.RdBu)
 plt.show()
 
 # %%
@@ -244,4 +243,15 @@ enhanced_img = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
 
 # Stacking the original image with the enhanced image
 result = np.hstack((img, enhanced_img))
-cv2.imshow('Result', result)
+#cv2.imshow('Result', result)
+
+# %%
+
+plt.figure(figsize=(50, 50))
+plt.subplot(221)
+plt.title('Original image', size=50)
+plt.imshow(cv_img)
+plt.subplot(222)
+plt.title('Predicted heatmap', size=50)
+plt.imshow(enhanced_img, cmap=plt.cm.Reds)
+plt.show()

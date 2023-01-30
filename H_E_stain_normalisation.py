@@ -108,16 +108,16 @@ def normalizeStaining(img, saveFile=None, Io=240, alpha=1, beta=0.15):
 if __name__=='__main__':
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('--imageFile', type=str, default= np_img, help='RGB image file')
+    # #parser.add_argument('--imageFile', type=str, default= np_img, help='RGB image file')
     parser.add_argument('--saveFile', type=str, default='output', help='save file')
-    parser.add_argument('--Io', type=int, default=240)
+    parser.add_argument('--Io', type=int, default=220)
     parser.add_argument('--alpha', type=float, default=1)
-    parser.add_argument('--beta', type=float, default=0.15)
+    parser.add_argument('--beta', type=float, default=0.5)
     args = parser.parse_args()
     
-    img = np.array(Image.open(args.imageFile))
+    #img = np.array(Image.open(img))
 
-    normalizeStaining(img = img,
+    normalizeStaining(img = np_img,
                       saveFile = args.saveFile,
                       Io = args.Io,
                       alpha = args.alpha,

@@ -80,7 +80,7 @@ class VGG_embedding(nn.Module):
         net.classifier = nn.Sequential(*features)
         self.vgg_embedding = nn.Sequential(net)
         
-        net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/vgg16_QMUL_Binary_12.pt"), strict=True)
+        net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/embedding_QJ_Binary_12.pth"), strict=True)
         
         #num_features = net.classifier[6].in_features
         features = list(net.classifier.children())[:-1] # Remove last layer
