@@ -25,10 +25,10 @@ Image.MAX_IMAGE_PIXELS = None
 # %%
 
 patch_size = 224
-step = 12
+step = 28
 slide_level = 1
 main_path = r"C:\Users\Amaya\Documents\PhD\NECCESITY\Slides\QMUL\slides\PATHSSAI ID 10-T59-02.ndpi"
-binary_mask = r"C:\Users\Amaya\Documents\PhD\NECCESITY\Slides\QMUL\masks\PATHSSAI ID 10-T59-02.png"
+binary_mask = r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/QMUL QuPath\masks\PATHSSAI ID 10-T59-02.png"
 
 # %%
 
@@ -69,6 +69,17 @@ cropped_mask = np_mask_resized[h_min:h_max, w_min:w_max]
 
 # %%
 
+plt.figure(figsize=(50, 50))
+plt.subplot(221)
+plt.title('Original image', size=50)
+plt.imshow(cropped_image)
+plt.subplot(222)
+plt.title('Predicted heatmap', size=50)
+plt.imshow(cropped_mask)
+plt.show()
+
+# %%
+
 patches_img = patchify(cropped_image, (patch_size, patch_size, 3), step=step)
 #patches_mask = patchify(np_mask_resized, (patch_size, patch_size), step=step)
 
@@ -82,8 +93,8 @@ embedding_net = VGG_embedding()
 classification_net = GatedAttention()
 
 # load pre trained models
-embedding_net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/embedding_QMUL_Binary_12.pth"), strict=True)
-classification_net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/classification_QMUL_Binary_12.pth"), strict=True)
+embedding_net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/embedding_QJ_Binary_12.pth"), strict=True)
+classification_net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/classification_QJ_Binary_12.pth"), strict=True)
 
 
 if use_gpu:

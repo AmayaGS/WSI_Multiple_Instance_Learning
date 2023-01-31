@@ -103,7 +103,7 @@ file_ids = sorted(set(ids))
 
 # %%
 
-train_ids, test_ids = train_test_split(file_ids, test_size=1-train_fraction, random_state=42)
+train_ids, test_ids = train_test_split(file_ids, test_size=1-train_fraction, random_state=2)
 train_subset_ids = random.sample(train_ids, 10)
 test_subset_ids = random.sample(test_ids, 6)
 
@@ -659,14 +659,16 @@ test_error, test_auc, test_accuracy, test_acc_logger, labels, prob, clsf_report,
 
 fpr, tpr, _ = roc_curve(labels, prob[:, 1])
 plt.figure(figsize=(5,5))
-plt.plot(fpr, tpr, color='r', label='AUC = %0.2f' % test_auc)
+plt.plot(fpr, tpr, color='r')
 plt.plot([0, 1], [0, 1], color = 'black', linestyle = '--')
+#plt.plot(recall, precision, color='darkblue', label='Sensitivity = %0.2f\nSpecificity = %0.2f' % (sensitivity, specificity))
 plt.xticks(fontsize=12)
 plt.yticks(fontsize=12)
 plt.xlabel('False Positive Rate', size=15)
 plt.ylabel('True Positive Rate', size=15)
-plt.title('Receiver Operating Characteristic', size=15)
-plt.legend(loc="lower right", prop={'size': 15})
+plt.title('AUC = %0.2f' % test_auc, size=20)
+plt.text(0.3, 0.0, 'Sensitivity = 0.90\nSpecificity = 0.86', fontsize = 20)
+#plt.legend(loc="lower right", prop={'size': 15})
 plt.show()
 
 # %%
@@ -679,14 +681,14 @@ from sklearn.metrics import auc, average_precision_score
 precision, recall, thresholds = precision_recall_curve(labels, prob[:, 1])
 auc_precision_recall = auc(recall, precision)
 plt.figure(figsize=(5,5))
-plt.plot(recall, precision, color='darkblue', label='Average Precision = %0.2f\nSensitivity = %0.2f,\nSpecificity = %0.2f' % (auc_precision_recall, sensitivity, specificity))
+plt.plot(recall, precision, color='darkblue', label='Sensitivity = %0.2f\nSpecificity = %0.2f' % (sensitivity, specificity))
 #add axis labels to plot
 plt.xticks(fontsize=12)
 plt.yticks(fontsize=12)
-plt.title('Precision-Recall Curve', size=15)
+plt.title('Average Precision = %0.2f' % auc_precision_recall, size=20)
 plt.ylabel('Precision', size=15)
 plt.xlabel('Recall', size=15)
-plt.legend(loc='center left', prop={'size': 13})
+plt.legend(loc='lower left', prop={'size': 19})
 #display plot
 plt.show()
 
@@ -741,7 +743,7 @@ def plot_confusion_matrix(cm,
 
     plt.figure(figsize=(8, 6))
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    plt.title('Accuracy={:0.2f}'.format(accuracy), size=20)
+    plt.title('Accuracy={:0.2f}'.format(accuracy), size=25)
     plt.colorbar()
 
     if target_names is not None:
@@ -761,14 +763,14 @@ def plot_confusion_matrix(cm,
             #          color="white" if cm[i, j] > thresh else "black")
             plt.text(j, i, "{:0.2f}".format(cm[i, j]),
                      horizontalalignment="center",
-                     color="black", size=20)
+                     color="black", size=25)
         else:
             plt.text(j, i, "{:,}".format(cm[i, j]),
                      horizontalalignment="center",
                      color="white" if cm[i, j] > thresh else "black")
     plt.text(j, i, "{:0.2f}".format(cm[1, 1]),
              horizontalalignment="center",
-             color="white", size=20)
+             color="white", size=25)
 
 
     plt.tight_layout()
