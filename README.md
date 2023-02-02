@@ -11,6 +11,8 @@ A modified CLAM/MIL pipeline for large histopathology WSIs, composed of:
 
 ![alt text](https://github.com/AmayaGS/HistoMIL/blob/main/model.png?raw=true)
 
+![alt text](https://github.com/AmayaGS/HistoMIL/blob/main/heatmap7.png?raw=true)
+
 
 <p>References:<br>
 https://github.com/mahmoodlab/CLAM#readme <br>
