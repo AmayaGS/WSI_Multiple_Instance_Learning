@@ -7,28 +7,34 @@ Created on Tue Jan 12 14:13:14 2023
 
 # %%
 
-import os
 import torch
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
+from torchvision import transforms
+
 from PIL import Image
 import openslide as osi
 
-from patchify import patchify, unpatchify
-
-from sklearn.model_selection import train_test_split
+from patchify import patchify
 
 Image.MAX_IMAGE_PIXELS = None
+
+use_gpu = torch.cuda.is_available()
+if use_gpu:
+    print("Using CUDA")
+device = torch.device("cuda:0")
 
 # %%
 
 patch_size = 224
-step = 28
+step = 14
 slide_level = 1
-main_path = r"C:\Users\Amaya\Documents\PhD\NECCESITY\Slides\QMUL\slides\PATHSSAI ID 10-T59-02.ndpi"
-binary_mask = r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/QMUL QuPath\masks\PATHSSAI ID 10-T59-02.png"
+# main_path = r"C:\Users\Amaya\Documents\PhD\NECCESITY\Slides\QMUL\slides\PATHSSAI ID 10-T59-02.ndpi"
+# binary_mask = r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/QMUL QuPath\masks\PATHSSAI ID 10-T59-02.png"
+main_path = r"C:\Users\Amaya\Documents\PhD\NECCESITY\Slides\QMUL\slides\PATHSSAI ID 10-101-02.ndpi"
+binary_mask = r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/QMUL QuPath\masks\PATHSSAI ID 10-101-02.png"
 
 # %%
 
@@ -71,12 +77,33 @@ cropped_mask = np_mask_resized[h_min:h_max, w_min:w_max]
 
 plt.figure(figsize=(50, 50))
 plt.subplot(221)
-plt.title('Original image', size=50)
+plt.title('Original image', size=65)
 plt.imshow(cropped_image)
 plt.subplot(222)
-plt.title('Predicted heatmap', size=50)
+plt.title('Predicted heatmap', size=65)
 plt.imshow(cropped_mask)
 plt.show()
+
+# %%
+
+train_transform = transforms.Compose([
+        transforms.Resize((224, 224)),                            
+        #transforms.ColorJitter(brightness=0.005, contrast=0.005, saturation=0.005, hue=0.005),
+        transforms.RandomChoice([
+        transforms.ColorJitter(brightness=0.1),
+        transforms.ColorJitter(contrast=0.1), 
+        transforms.ColorJitter(saturation=0.1),
+        transforms.ColorJitter(hue=0.1)]),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))      
+    ])
+
+test_transform = transforms.Compose([
+        transforms.Resize((224, 224)),                            
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))      
+    ])
 
 # %%
 
@@ -93,7 +120,7 @@ embedding_net = VGG_embedding()
 classification_net = GatedAttention()
 
 # load pre trained models
-embedding_net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/embedding_QJ_Binary_12.pth"), strict=True)
+#embedding_net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/embedding_QJ_Binary_12.pth"), strict=True)
 classification_net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/classification_QJ_Binary_12.pth"), strict=True)
 
 
@@ -186,10 +213,10 @@ plt.show()
 
 plt.figure(figsize=(50, 50))
 plt.subplot(221)
-plt.title('Original image', size=50)
+plt.title('Original image', size=65)
 plt.imshow(cropped_image)
 plt.subplot(222)
-plt.title('Predicted heatmap', size=50)
+plt.title('Predicted heatmap', size=65)
 plt.imshow(att_img_crop, cmap=plt.cm.RdBu)
 plt.imshow(cropped_image, alpha=0.4)
 plt.show()
@@ -197,7 +224,7 @@ plt.show()
 # %%
 
 plt.figure(figsize=(50, 50))
-plt.title('Predicted heatmap', size=80)
+plt.title('Predicted heatmap', size=90)
 plt.imshow(att_img_crop, cmap=plt.cm.RdBu)
 plt.show()
 

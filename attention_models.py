@@ -65,7 +65,7 @@ class VGG_embedding(nn.Module):
     Model definition
     """
 
-    def __init__(self):
+    def __init__(self, weights):
         
         super(VGG_embedding, self).__init__()
         net = models.vgg16_bn(pretrained=True)
@@ -80,7 +80,7 @@ class VGG_embedding(nn.Module):
         net.classifier = nn.Sequential(*features)
         self.vgg_embedding = nn.Sequential(net)
         
-        net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/embedding_QJ_Binary_12.pth"), strict=True)
+        net.load_state_dict(torch.load(weights), strict=True)
         
         #num_features = net.classifier[6].in_features
         features = list(net.classifier.children())[:-1] # Remove last layer
@@ -140,7 +140,7 @@ class GatedAttention(nn.Module):
             nn.Linear(self.L, self.n_classes)
         ) 
 
-        instance_classifiers = [nn.Linear(self.L, 2) for i in range(n_classes)]
+        instance_classifiers = [nn.Linear(self.L, 2) for i in range(n_classes)] # do I need to change this to n_classes???
         self.instance_classifiers = nn.ModuleList(instance_classifiers)
         
     def forward(self, x, label=None, instance_eval=False):
