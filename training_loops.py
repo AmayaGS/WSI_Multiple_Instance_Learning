@@ -122,8 +122,8 @@ def train_embedding(vgg, train_loader, test_loader, criterion, optimizer, num_ep
             del inputs, labels, outputs, preds
             torch.cuda.empty_cache()
         
-        avg_loss_val = loss_val / len(val_batches)
-        avg_acc_val = acc_val / len(val_batches)
+        avg_loss_val = loss_val / len(test_loader)
+        avg_acc_val = acc_val / len(test_loader)
 
         print()
         print("Epoch {} result: ".format(epoch))
