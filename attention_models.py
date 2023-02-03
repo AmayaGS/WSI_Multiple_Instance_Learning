@@ -65,28 +65,29 @@ class VGG_embedding(nn.Module):
     Model definition
     """
 
-    def __init__(self, weights):
+    def __init__(self, weights, embedding_vector_size=1024, n_classes=2):
         
         super(VGG_embedding, self).__init__()
-        net = models.vgg16_bn(pretrained=True)
-               
+        
+        embedding_net = models.vgg16_bn(pretrained=True)
+                        
         # Freeze training for all layers
-        for param in net.parameters():
+        for param in embedding_net.parameters():
             param.require_grad = False
-            
-        num_features = net.classifier[6].in_features
-        features = list(net.classifier.children())[:-1] # Remove last layer
-        features.extend([nn.Linear(num_features, 2)]) # Add our layer with n outputs
-        net.classifier = nn.Sequential(*features)
-        self.vgg_embedding = nn.Sequential(net)
         
-        net.load_state_dict(torch.load(weights), strict=True)
+        # Newly created modules have require_grad=True by default
+        num_features = embedding_net.classifier[6].in_features
+        features = list(embedding_net.classifier.children())[:-1] # Remove last layer
+        features.extend([nn.Linear(num_features, embedding_vector_size)])
+        features.extend([nn.Dropout(0.5)])
+        features.extend([nn.Linear(embedding_vector_size, n_classes)]) # Add our layer with n outputs
+        embedding_net.classifier = nn.Sequential(*features) # Replace the model classifier
         
-        #num_features = net.classifier[6].in_features
-        features = list(net.classifier.children())[:-1] # Remove last layer
-        features.extend([nn.Linear(num_features, 1024)]) # Add our layer with n outputs
-        net.classifier = nn.Sequential(*features)
-        self.vgg_embedding = nn.Sequential(net)
+        embedding_net.load_state_dict(torch.load(weights), strict=True)
+        
+        features = list(embedding_net.classifier.children())[:-2] # Remove last layer
+        embedding_net.classifier = nn.Sequential(*features)
+        self.vgg_embedding = nn.Sequential(embedding_net)
 
     def forward(self, x):
         
@@ -106,7 +107,7 @@ class GatedAttention(nn.Module):
     n_classes: number of classes
     """
     
-    def __init__(self, L= 1024, D=224, Dropout= True, n_classes=2, k_sample=8, instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False):
+    def __init__(self, L= 1024, D=224, Dropout=True, n_classes=2, k_sample=8, instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False):
         
         super(GatedAttention, self).__init__()
         self.L = L
@@ -140,10 +141,10 @@ class GatedAttention(nn.Module):
             nn.Linear(self.L, self.n_classes)
         ) 
 
-        instance_classifiers = [nn.Linear(self.L, 2) for i in range(n_classes)] # do I need to change this to n_classes???
+        instance_classifiers = [nn.Linear(self.L, n_classes) for i in range(n_classes)] # do I need to change this to n_classes???
         self.instance_classifiers = nn.ModuleList(instance_classifiers)
         
-    def forward(self, x, label=None, instance_eval=False):
+    def forward(self, x, label=None, instance_eval=True):
 
         A_V = self.attention_V(x)  # NxD
         A_U = self.attention_U(x)  # NxD

@@ -50,7 +50,7 @@ def pr_plot(labels, prob, sensitivity, specificity):
     
     # PR
     
-    precision, recall, thresholds = precision_recall_curve(labels, prob[:, 1])
+    precision, recall, thresholds = precision_recall_curve(labels, prob)
     auc_precision_recall = auc(recall, precision)
     plt.figure(figsize=(5,5))
     plt.plot(recall, precision, color='darkblue', label='Sensitivity = %0.2f\nSpecificity = %0.2f' % (sensitivity, specificity))

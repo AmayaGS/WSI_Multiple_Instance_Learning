@@ -16,7 +16,7 @@ class histoDataset(Dataset):
     def __init__(self, df, transform, label):
         
         self.transform = transform 
-        self.labels = df[label].tolist()
+        self.labels = df[label].astype(int).tolist()
         self.filepaths = df['Location'].tolist()
 
     def __len__(self):
@@ -35,7 +35,7 @@ class Accuracy_Logger(object):
     
     """Accuracy logger"""
     def __init__(self, n_classes):
-        super(Accuracy_Logger, self).__init__()
+        #super(Accuracy_Logger, self).__init__()
         self.n_classes = n_classes
         self.initialize()
 

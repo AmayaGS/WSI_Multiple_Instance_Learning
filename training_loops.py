@@ -88,7 +88,7 @@ def train_embedding(vgg, train_loader, test_loader, criterion, optimizer, num_ep
             del inputs, labels, outputs, preds
             torch.cuda.empty_cache()
 
-        avg_loss = loss_train  / len(train_loader)
+        avg_loss = loss_train  / len(train_loader) # wrong size
         avg_acc = acc_train / len(train_loader)
         
         vgg.train(False)
@@ -500,8 +500,8 @@ def test_slides(embedding_net, classification_net, test_loaded_subsets, loss_fn,
     print(conf_matrix)
     
     if n_classes == 2:
-        sensitivity = conf_matrix[1,1] / (conf_matrix[0,0] + conf_matrix[1,0]) # TP / (TP + FN)
-        specificity = conf_matrix[1,1] / (conf_matrix[1,1] + conf_matrix[0,1]) # TN / (TN + FP)
+        sensitivity = conf_matrix[1,1] / (conf_matrix[1,1] + conf_matrix[1,0]) # TP / (TP + FN)
+        specificity = conf_matrix[0,0] / (conf_matrix[0,0] + conf_matrix[0,1]) # TN / (TN + FP)
         print('Sensitivity: ', sensitivity) 
         print('Specificity: ', specificity)
 

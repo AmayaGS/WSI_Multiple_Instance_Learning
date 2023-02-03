@@ -23,40 +23,37 @@ class Loaders:
     #def __init__(self):
     
 
-    def df_loader(self, df, train_transform, test_transform, train_fraction, random_state, patient_id, label):
+    def df_loader(self, df, train_transform, test_transform, train_fraction, random_state, patient_id, label, subset=False):
         
         # patients need to be strictly separated between splits to avoid leakage. 
         ids  = df[patient_id].tolist()
         file_ids = sorted(set(ids))
-        self.file_ids = file_ids
-        self.train_transform = train_transform
-        self.test_transform = test_transform
     
-        train_ids, test_ids = train_test_split(self.file_ids, test_size=1-train_fraction, random_state=random_state)
-        train_subset_ids = random.sample(train_ids, 5)
-        test_subset_ids = random.sample(test_ids, 3)
-        
+        train_ids, test_ids = train_test_split(file_ids, test_size=1-train_fraction, random_state=random_state)
         train_sub = df[df[patient_id].isin(train_ids)].reset_index(drop=True)
         test_sub = df[df[patient_id].isin(test_ids)].reset_index(drop=True)
-        train_sub_sample = df[df[patient_id].isin(train_subset_ids)].reset_index(drop=True)
-        test_sub_sample = df[df[patient_id].isin(test_subset_ids)].reset_index(drop=True)
-    
         df_train = histoDataset(train_sub, train_transform, label=label)
-        df_test = histoDataset(test_sub, test_transform, label=label)  
-        df_train_sample = histoDataset(train_sub_sample, train_transform, label=label)
-        df_test_sample = histoDataset(test_sub_sample, test_transform, label=label)
+        df_test = histoDataset(test_sub, test_transform, label=label)
         
-        return df_train, df_test, train_sub, test_sub, df_train_sample, df_test_sample, train_ids, test_ids
+        if subset:
+            train_subset_ids = random.sample(train_ids, 5)
+            test_subset_ids = random.sample(test_ids, 3)
+            train_sub_sample = df[df[patient_id].isin(train_subset_ids)].reset_index(drop=True)
+            test_sub_sample = df[df[patient_id].isin(test_subset_ids)].reset_index(drop=True)
+            df_train_sample = histoDataset(train_sub_sample, train_transform, label=label)
+            df_test_sample = histoDataset(test_sub_sample, test_transform, label=label)
+            
+            return df_train_sample, df_test_sample, train_sub_sample, test_sub_sample, file_ids, train_subset_ids, test_subset_ids
+        
+        return df_train, df_test, train_sub, test_sub, file_ids, train_ids, test_ids
     
     
-    def patches_dataloader(self, df_train, df_test, df_train_sample, df_test_sample, sampler, train_batch, test_batch, num_workers, shuffle, drop_last, collate_fn):
+    def patches_dataloader(self, df_train, df_test, sampler, train_batch, test_batch, num_workers, shuffle, drop_last, collate_fn):
         
         train_loader = torch.utils.data.DataLoader(df_train, batch_size=train_batch, shuffle=shuffle, num_workers=num_workers, drop_last=drop_last, sampler=sampler, collate_fn=collate_fn)
         test_loader = torch.utils.data.DataLoader(df_test, batch_size=test_batch, shuffle=shuffle, num_workers=num_workers, drop_last=drop_last)
-        subset_train_loader = torch.utils.data.DataLoader(df_train_sample, batch_size=train_batch, shuffle=shuffle, num_workers=num_workers, drop_last=drop_last, sampler=sampler, collate_fn=collate_fn)
-        subset_test_loader = torch.utils.data.DataLoader(df_test_sample, batch_size=test_batch, shuffle=shuffle, num_workers=num_workers, drop_last=drop_last)
-        
-        return train_loader, test_loader, subset_train_loader, subset_test_loader
+
+        return train_loader, test_loader
 
 
     def slides_dataloader(self, train_sub, test_sub, train_ids, test_ids, train_transform, test_transform, slide_batch, num_workers, shuffle, label='Binary disease', patient_id="Patient ID"):
