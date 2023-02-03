@@ -256,7 +256,7 @@ def train_att_slides(embedding_net, classification_net, train_loaded_subsets, te
         if inst_count > 0:
             train_inst_loss /= inst_count
             print('\n')
-            for i in range(2):
+            for i in range(n_classes):
                 acc, correct, count = inst_logger.get_summary(i)
                 print('class {} clustering acc {}: correct {}/{}'.format(i, acc, correct, count))
          
@@ -353,7 +353,7 @@ def train_att_slides(embedding_net, classification_net, train_loaded_subsets, te
         print('\nVal Set, val_loss: {:.4f}, val_error: {:.4f}, AUC: {:.4f}, Accuracy: {:.4f}'.format(val_loss, val_error, val_auc, val_accuracy))
         if val_inst_count > 0:
             val_inst_loss /= val_inst_count
-            for i in range(2):
+            for i in range(n_classes):
                 acc, correct, count = val_inst_logger.get_summary(i)
                 print('class {} clustering acc {}: correct {}/{}'.format(i, acc, correct, count))
     

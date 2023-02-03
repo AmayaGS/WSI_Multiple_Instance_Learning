@@ -141,7 +141,7 @@ class GatedAttention(nn.Module):
             nn.Linear(self.L, self.n_classes)
         ) 
 
-        instance_classifiers = [nn.Linear(self.L, n_classes) for i in range(n_classes)] # do I need to change this to n_classes???
+        instance_classifiers = [nn.Linear(self.L, n_classes) for i in range(n_classes)] #  n_classes?
         self.instance_classifiers = nn.ModuleList(instance_classifiers)
         
     def forward(self, x, label=None, instance_eval=True):
