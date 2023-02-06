@@ -69,24 +69,31 @@ testing_slides = True
 
 embedding_vector_size = 1024
 
-subtyping = True # (True for 3 class problem) 
-
-embedding_weights = r"C:\Users\Amaya\Documents\PhD\Data\CD68\embedding_CD68_pathotype.pth"
-classification_weights = r"C:\Users\Amaya\Documents\PhD\Data\CD68\classification_CD68_pathotype.pth"
+#subtyping = False # (True for 3 class problem) 
 
 # %%
 
 #file = r"C:\Users\Amaya\Documents\PhD\NECCESITY\Slides\qj_patch_labels.csv"
-file = r"C:\Users\Amaya\Documents\PhD\Data\CD68\df_all_CD68_patches_labels.csv"
+file = r"C:\Users\Amaya\Documents\PhD\Data\CD68\df_all_CD20_patches_labels.csv"
 df = pd.read_csv(file, header=0)
-
-label = 'Pathotype'
-patient_id = 'Patient ID'
-n_classes=3
 
 # %%
 
-df = df.dropna(subset=["Pathotype"])
+label = 'Amaya CD20'
+patient_id = 'Patient ID'
+n_classes=2
+
+if n_classes > 2:
+    subtyping=True 
+    
+# %%
+
+embedding_weights = r"C:\Users\Amaya\Documents\PhD\Data\CD20\embedding_CD20_" + label + ".pth"
+classification_weights = r"C:\Users\Amaya\Documents\PhD\Data\CD20\classification_CD20_" + label + ".pth"
+
+# %%
+
+df = df.dropna(subset=[label])
 
 # %%
 
@@ -180,7 +187,7 @@ if train_slides:
     
 if train_slides:
     
-    embedding_model, classification_model = train_att_slides(embedding_net, classification_net, train_loaded_subsets, test_loaded_subsets, loss_fn, optimizer_ft, n_classes=n_classes, bag_weight=0.7, num_epochs=1)
+    embedding_model, classification_model = train_att_slides(embedding_net, classification_net, train_loaded_subsets, test_loaded_subsets, loss_fn, optimizer_ft, n_classes=n_classes, bag_weight=0.7, num_epochs=5)
     torch.save(classification_model.state_dict(), classification_weights)
 
 # %%
