@@ -7,8 +7,10 @@ Created on Thu Nov 17 11:52:02 2022
 
 import os, os.path
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+import time
 
 from collections import Counter
+from collections import defaultdict
 
 from PIL import Image
 from PIL import ImageFile
@@ -21,6 +23,7 @@ from matplotlib import pyplot as plt
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 
 from torchvision import transforms, models
 
@@ -63,7 +66,7 @@ num_workers = 0
 shuffle = False
 drop_last = False
 
-train_patches = False
+train_patches = True
 train_slides = False
 testing_slides = True
 
@@ -74,22 +77,24 @@ embedding_vector_size = 1024
 # %%
 
 #file = r"C:\Users\Amaya\Documents\PhD\NECCESITY\Slides\qj_patch_labels.csv"
-file = r"C:\Users\Amaya\Documents\PhD\Data\CD68\df_all_CD20_patches_labels.csv"
+file = r"C:\Users\Amaya\Documents\PhD\Data\CD68\df_all_CD68_patches_labels.csv"
 df = pd.read_csv(file, header=0)
 
 # %%
 
-label = 'Amaya CD20'
+label = 'Amaya CD68'
 patient_id = 'Patient ID'
 n_classes=2
 
 if n_classes > 2:
-    subtyping=True 
+    subtyping=True
+else:
+    subtyping=False
     
 # %%
 
-embedding_weights = r"C:\Users\Amaya\Documents\PhD\Data\CD20\embedding_CD20_" + label + ".pth"
-classification_weights = r"C:\Users\Amaya\Documents\PhD\Data\CD20\classification_CD20_" + label + ".pth"
+embedding_weights = r"C:\Users\Amaya\Documents\PhD\Data\CD68\embedding_CD68_" + label + ".pth"
+classification_weights = r"C:\Users\Amaya\Documents\PhD\Data\CD68\classification_CD68_" + label + ".pth"
 
 # %%
 
@@ -213,9 +218,83 @@ if testing_slides:
 
 # %%
 
-target_names=["pSS -", "pSS+"]
+target_names=["Fibroid", "M/Lymphoid"]
 
 auc_plot(labels, prob[:, 1], test_auc)
 pr_plot(labels, prob[:, 1], sensitivity, specificity)
 plot_confusion_matrix(conf_matrix, target_names, title='Confusion matrix', cmap=None, normalize=True)
 
+
+###############################
+# %%
+
+def soft_vote(vgg16, loaded_subsets):
+    
+    since = time.time()
+
+    history = defaultdict(list)
+
+    acc_train = 0
+
+    ################################
+    # SOFT VOTE
+    
+    vgg16.eval()
+    
+    #train_total = 0
+    
+    preds_x_class = []
+    
+    for i, loader in enumerate(loaded_subsets.values()):
+
+        print("\rTesting batch {}/{}".format(i, len(loaded_subsets)), end='', flush=True)
+        
+        patient_soft_voting = []
+        
+        for data in loader:
+            
+            inputs, labels = data
+            
+            with torch.no_grad():
+                if use_gpu:
+                    inputs, labels = inputs.cuda(), labels.cuda()
+                else:
+                    inputs, labels = inputs, labels
+        
+            output = vgg16(inputs)
+            probs = F.softmax(output, dim=1)
+            np_probs = probs.detach().to('cpu')
+            patient_soft_voting.append(np_probs)
+            
+            #embedding = activation[vgg.classifier[6]]
+            
+        prob_x_class = torch.stack(patient_soft_voting).sum(axis=0)
+        preds_x_class.append(prob_x_class / len(loader))
+        max_prob_class = torch.argmax(prob_x_class)
+        acc_train += (max_prob_class == labels).sum().item()
+        
+        history['actual'].append(labels.detach().to('cpu').numpy())
+        history['predicted'].append(max_prob_class.detach().to('cpu').numpy())
+                                
+        del inputs, labels, output
+        gc.collect()
+        torch.cuda.empty_cache()
+        
+    avg_acc = acc_train / len(loaded_subsets)
+    
+    print()
+    print("Avg acc: {:.4f}".format(avg_acc))
+    print('-' * 10)
+    print()
+
+    elapsed_time = time.time() - since
+    
+    print()
+    print("Testing completed in {:.0f}m {:.0f}s".format(elapsed_time // 60, elapsed_time % 60))
+    
+    return history, patient_soft_voting
+
+
+# %%
+
+history = soft_vote(embedding_net, test_loaded_subsets)

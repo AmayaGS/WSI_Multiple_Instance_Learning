@@ -12,12 +12,13 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
-from torchvision import transforms
+from torchvision import transforms, models
 
 from PIL import Image
 import openslide as osi
 
 from patchify import patchify
+from attention_models import VGG_embedding, GatedAttention
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -26,6 +27,17 @@ if use_gpu:
     print("Using CUDA")
 device = torch.device("cuda:0")
 
+import os, os.path
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+
+from PIL import Image
+
+import torch
+import torch.nn as nn
+
+from loaders import Loaders
+from training_loops import train_embedding, train_att_slides, test_slides
+
 # %%
 
 patch_size = 224
@@ -33,8 +45,40 @@ step = 14
 slide_level = 1
 # main_path = r"C:\Users\Amaya\Documents\PhD\NECCESITY\Slides\QMUL\slides\PATHSSAI ID 10-T59-02.ndpi"
 # binary_mask = r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/QMUL QuPath\masks\PATHSSAI ID 10-T59-02.png"
-main_path = r"C:\Users\Amaya\Documents\PhD\NECCESITY\Slides\QMUL\slides\PATHSSAI ID 10-101-02.ndpi"
-binary_mask = r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/QMUL QuPath\masks\PATHSSAI ID 10-101-02.png"
+main_path = r"C:\Users\Amaya\Documents\PhD\Data\CD68\slides\HOME-R4RA-H998_CD68_S14 - 2021-01-15 13.45.44.tif"
+binary_mask = r"C:\Users\Amaya\Documents\PhD\Data\CD68\masks\HOME-R4RA-H998_CD68_S14 - 2021-01-15 13.45.44.png"
+
+# %%
+
+torch.manual_seed(42)
+train_fraction = .7
+random_state = 2
+
+subset= False
+
+train_batch = 10
+test_batch = 1
+slide_batch = 1
+
+num_workers = 0
+shuffle = False
+drop_last = False
+
+train_patches = False
+train_slides = False
+testing_slides = True
+
+embedding_vector_size = 1024
+
+label = 'Amaya CD68'
+patient_id = 'Patient ID'
+n_classes=2
+
+if n_classes > 2:
+    subtyping=True
+else:
+    subtyping=False
+    
 
 # %%
 
@@ -43,6 +87,20 @@ properties = slide.properties
 #adjusted_level = int(slide_level + np.log2(int(properties['openslide.objective-power'])/40))
 slide_adjusted_level_dims = slide.level_dimensions[slide_level]
 np_img = np.array(slide.read_region((0, 0), slide_level, slide_adjusted_level_dims).convert('RGB'))
+
+
+# patient_id = 'Patient ID'
+# n_classes=2
+
+# if n_classes > 2:
+#     subtyping=True
+# else:
+#     subtyping=False
+    
+# %%
+
+embedding_weights = r"C:\Users\Amaya\Documents\PhD\Data\CD68\embedding_CD68_" + label + ".pth"
+classification_weights = r"C:\Users\Amaya\Documents\PhD\Data\CD68\classification_CD68_" + label + ".pth"
 
 # %%
 
@@ -112,17 +170,31 @@ patches_img = patchify(cropped_image, (patch_size, patch_size, 3), step=step)
 
 # %%
 
-from attention_models import VGG_embedding, GatedAttention
+embedding_net = models.vgg16_bn(pretrained=True)
+                
+# Freeze training for all layers
+for param in embedding_net.parameters():
+    param.require_grad = False
 
-device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# Newly created modules have require_grad=True by default
+num_features = embedding_net.classifier[6].in_features
+features = list(embedding_net.classifier.children())[:-1] # Remove last layer
+features.extend([nn.Linear(num_features, embedding_vector_size)])
+features.extend([nn.Dropout(0.5)])
+features.extend([nn.Linear(embedding_vector_size, n_classes)]) # Add our layer with n outputs
+embedding_net.classifier = nn.Sequential(*features) # Replace the model classifier
 
-embedding_net = VGG_embedding()
-classification_net = GatedAttention()
+
+# %%
+
+loss = nn.CrossEntropyLoss()
+
+#embedding_net = VGG_embedding(embedding_weights, embedding_vector_size=embedding_vector_size, n_classes=n_classes)
+classification_net = GatedAttention(n_classes=n_classes, subtyping=subtyping)
 
 # load pre trained models
-#embedding_net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/embedding_QJ_Binary_12.pth"), strict=True)
-classification_net.load_state_dict(torch.load(r"C:/Users/Amaya/Documents/PhD/NECCESITY/Slides/classification_QJ_Binary_12.pth"), strict=True)
-
+embedding_net.load_state_dict(torch.load(embedding_weights), strict=True)    
+classification_net.load_state_dict(torch.load(classification_weights), strict=True)
 
 if use_gpu:
     embedding_net.cuda()
@@ -132,6 +204,9 @@ if use_gpu:
 
 label = torch.Tensor(1)
 patient_embedding = []
+
+embedding_net.eval()
+classification_net.eval()
 
 for i in range(patches_img.shape[0]):
     for j in range(patches_img.shape[1]):

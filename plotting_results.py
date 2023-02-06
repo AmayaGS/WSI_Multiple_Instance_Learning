@@ -116,7 +116,7 @@ def plot_confusion_matrix(cm,
     if target_names is not None:
         tick_marks = np.arange(len(target_names))
         plt.xticks(tick_marks, target_names, rotation=0, size=20)
-        plt.yticks(tick_marks, target_names, size=20)
+        plt.yticks(tick_marks, target_names, rotation=0, size=20)
 
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
