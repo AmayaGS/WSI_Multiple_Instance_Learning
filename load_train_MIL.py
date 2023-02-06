@@ -63,8 +63,8 @@ num_workers = 0
 shuffle = False
 drop_last = False
 
-train_patches = True
-train_slides = True
+train_patches = False
+train_slides = False
 testing_slides = True
 
 embedding_vector_size = 1024
