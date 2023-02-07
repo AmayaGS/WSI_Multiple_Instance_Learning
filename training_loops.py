@@ -10,6 +10,7 @@ import os, os.path
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 
 import copy
+from collections import defaultdict
 
 import pandas as pd
 import numpy as np
@@ -30,6 +31,10 @@ from auxiliary_functions import Accuracy_Logger
 use_gpu = torch.cuda.is_available()
 if use_gpu:
     print("Using CUDA")
+    
+import gc 
+gc.enable()
+
     
 
 def train_embedding(vgg, train_loader, test_loader, criterion, optimizer, num_epochs=1):
@@ -511,3 +516,74 @@ def test_slides(embedding_net, classification_net, test_loaded_subsets, loss_fn,
     print("Training completed in {:.0f}m {:.0f}s".format(elapsed_time // 60, elapsed_time % 60))
         
     return val_error, val_auc, val_accuracy, val_acc_logger, labels, prob, clsf_report, conf_matrix, sensitivity, specificity, incorrect_preds
+
+
+
+def soft_vote(vgg16, loaded_subsets):
+    
+    since = time.time()
+
+    history = defaultdict(list)
+
+    acc_train = 0
+
+    ################################
+    # SOFT VOTE
+    
+    vgg16.eval()
+    
+    #train_total = 0
+    
+    preds_x_class = []
+    
+    for i, loader in enumerate(loaded_subsets.values()):
+
+        print("\rTesting batch {}/{}".format(i, len(loaded_subsets)), end='', flush=True)
+        
+        patient_soft_voting = []
+        
+        for data in loader:
+            
+            inputs, labels = data
+            
+            with torch.no_grad():
+                if use_gpu:
+                    inputs, labels = inputs.cuda(), labels.cuda()
+                else:
+                    inputs, labels = inputs, labels
+        
+            output = vgg16(inputs)
+            probs = F.softmax(output, dim=1)
+            np_probs = probs.detach().to('cpu')
+            patient_soft_voting.append(np_probs)
+            
+            #embedding = activation[vgg.classifier[6]]
+            
+        prob_x_class = torch.stack(patient_soft_voting).sum(axis=0)
+        preds_x_class.append(prob_x_class / len(loader))
+        max_prob_class = torch.argmax(prob_x_class)
+        acc_train += (max_prob_class == labels).sum().item()
+        
+        history['actual'].append(labels.detach().to('cpu').numpy())
+        history['predicted'].append(max_prob_class.detach().to('cpu').numpy())
+                                
+        del inputs, labels, output
+        gc.collect()
+        torch.cuda.empty_cache()
+        
+    avg_acc = acc_train / len(loaded_subsets)
+    
+    print()
+    print("Avg acc: {:.4f}".format(avg_acc))
+    print('-' * 10)
+    print()
+
+    elapsed_time = time.time() - since
+    
+    print()
+    print("Testing completed in {:.0f}m {:.0f}s".format(elapsed_time // 60, elapsed_time % 60))
+    
+    return history, patient_soft_voting
+
+
+# %%
