@@ -557,8 +557,6 @@ def soft_vote(vgg16, loaded_subsets):
             np_probs = probs.detach().to('cpu')
             patient_soft_voting.append(np_probs)
             
-            #embedding = activation[vgg.classifier[6]]
-            
         prob_x_class = torch.stack(patient_soft_voting).sum(axis=0)
         preds_x_class.append(prob_x_class / len(loader))
         max_prob_class = torch.argmax(prob_x_class)

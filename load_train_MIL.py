@@ -29,7 +29,7 @@ from torchvision import transforms, models
 
 from loaders import Loaders
 
-from training_loops import train_embedding, train_att_slides, test_slides
+from training_loops import train_embedding, train_att_slides, test_slides, soft_vote
 
 from attention_models import VGG_embedding, GatedAttention
 
@@ -67,7 +67,7 @@ shuffle = False
 drop_last = False
 
 train_patches = True
-train_slides = False
+train_slides = True
 testing_slides = True
 
 embedding_vector_size = 1024
@@ -76,13 +76,17 @@ embedding_vector_size = 1024
 
 # %%
 
+stain = 'CD138'
+
+# %%
+
 #file = r"C:\Users\Amaya\Documents\PhD\NECCESITY\Slides\qj_patch_labels.csv"
-file = r"C:\Users\Amaya\Documents\PhD\Data\CD68\df_all_CD68_patches_labels.csv"
+file = r"C:/Users/Amaya/Documents/PhD/Data/" + stain + "/df_all_"+ stain + "_patches_labels.csv"
 df = pd.read_csv(file, header=0)
 
 # %%
 
-label = 'Amaya CD68'
+label = 'Pathotype binary'
 patient_id = 'Patient ID'
 n_classes=2
 
@@ -93,8 +97,8 @@ else:
     
 # %%
 
-embedding_weights = r"C:\Users\Amaya\Documents\PhD\Data\CD68\embedding_CD68_" + label + ".pth"
-classification_weights = r"C:\Users\Amaya\Documents\PhD\Data\CD68\classification_CD68_" + label + ".pth"
+embedding_weights = r"C:/Users/Amaya/Documents/PhD/Data/" + stain + "/embedding_" + stain + "_" + label + ".pth"
+classification_weights = r"C:/Users/Amaya/Documents/PhD/Data/" + stain + "/classification_" + stain + "_" + label + ".pth"
 
 # %%
 
@@ -179,7 +183,7 @@ if train_patches:
 if train_slides:
     
     embedding_net = VGG_embedding(embedding_weights, embedding_vector_size=embedding_vector_size, n_classes=n_classes)
-    classification_net = GatedAttention(n_classes=n_classes, subtyping=subtyping)
+    classification_net = GatedAttention(n_classes=n_classes, subtyping=subtyping) # add classification weight variable. 
     
     if use_gpu:
         embedding_net.cuda()
@@ -192,7 +196,7 @@ if train_slides:
     
 if train_slides:
     
-    embedding_model, classification_model = train_att_slides(embedding_net, classification_net, train_loaded_subsets, test_loaded_subsets, loss_fn, optimizer_ft, n_classes=n_classes, bag_weight=0.7, num_epochs=5)
+    embedding_model, classification_model = train_att_slides(embedding_net, classification_net, train_loaded_subsets, test_loaded_subsets, loss_fn, optimizer_ft, n_classes=n_classes, bag_weight=0.7, num_epochs=10)
     torch.save(classification_model.state_dict(), classification_weights)
 
 # %%
@@ -228,6 +232,6 @@ plot_confusion_matrix(conf_matrix, target_names, title='Confusion matrix', cmap=
 ###############################
 # %%
 
-
-
 history = soft_vote(embedding_net, test_loaded_subsets)
+
+# %%
