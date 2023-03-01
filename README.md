@@ -1,6 +1,6 @@
 # HistoMIL
 
-<a href="https://github.com/AmayaGS/HistoMIL/blob/ac2ae80b998afc4f7298161562dba8bf2f688a4a/sjogren_mil_biopsy_classification_submission.pdf" target="_blank">Conference abstract.</a>
+Gallagher-Syed A., Pontarini E., Bombardieri M, Lewis M. J., Slabaugh G., Barnes M., "Histopathological Assessment of Sjogren's disease with HistoMIL", _IEEE Internal Symposium on Biomedical Imaging_, Cartagena de Indias. 2023. <a href="https://github.com/AmayaGS/HistoMIL/blob/ac2ae80b998afc4f7298161562dba8bf2f688a4a/sjogren_mil_biopsy_classification_submission.pdf" target="_blank">Conference abstract.</a>
 
 A modified CLAM/MIL pipeline for large histopathology WSIs, composed of:
 
