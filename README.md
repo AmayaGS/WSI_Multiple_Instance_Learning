@@ -1,6 +1,6 @@
 # HistoMIL
 
-<a href="AmayaGS/HistoMIL/sjogren_mil_biopsy_classification_submission.pdf" target="_blank">Conference abstract.</a>
+<a href="https://github.com/AmayaGS/HistoMIL/blob/ac2ae80b998afc4f7298161562dba8bf2f688a4a/sjogren_mil_biopsy_classification_submission.pdf" target="_blank">Conference abstract.</a>
 
 A modified CLAM/MIL pipeline for large histopathology WSIs, composed of:
 
